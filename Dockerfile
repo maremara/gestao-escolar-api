@@ -1,29 +1,19 @@
-# Use uma imagem base oficial do Python.
-# python:3.11-alpine é uma imagem ainda menor, ideal para produção.
-FROM python:3.11-alpine
+FROM python:3.13.4-alpine3.22
 
-# Define o diretório de trabalho dentro do contêiner.
+# Define o diretório de trabalho dentro do contêiner
 WORKDIR /app
 
-# Instala as dependências de sistema necessárias para compilar pacotes Python (como o psycopg2).
-# O --virtual .build-deps cria um grupo temporário que pode ser removido em um único passo.
-RUN apk add --no-cache --virtual .build-deps gcc musl-dev postgresql-dev
-
-# Copia o arquivo de dependências para o diretório de trabalho.
-# Copiar este arquivo separadamente aproveita o cache de camadas do Docker.
+# Copia o arquivo de requisitos e instala as dependências
+# Usamos --no-cache-dir para evitar o cache do pip, reduzindo o tamanho da imagem
 COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Instala as dependências do projeto.
-# Após a instalação, removemos as dependências de compilação para manter a imagem enxuta.
-RUN pip install --no-cache-dir --upgrade -r requirements.txt \
-    && apk del .build-deps
-
-# Copia o restante do código da aplicação para o diretório de trabalho.
+# Copia o restante do código da aplicação para o diretório de trabalho
 COPY . .
 
-# Expõe a porta em que a aplicação será executada.
+# Expõe a porta que a aplicação FastAPI irá rodar (padrão é 8000)
 EXPOSE 8000
 
-# Comando para executar a aplicação com Uvicorn.
-# O host 0.0.0.0 torna a aplicação acessível de fora do contêiner.
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Comando para rodar a aplicação usando uvicorn
+# O host 0.0.0.0 permite que a aplicação seja acessível externamente ao contêiner
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000",  "--reload"]
